@@ -27,7 +27,7 @@ module.exports = {
   },
   biblia: {
     enabled: process.env.BIBLIA_ENABLED !== 'false',
-    cronSchedule: process.env.BIBLIA_CRON || '0 8 * * *',
+    cronSchedule: process.env.BIBLIA_CRON || '15 7 * * *',
     numbers: (process.env.BIBLIA_NUMBERS || '')
       .split(',')
       .map(n => n.trim())
