@@ -17,6 +17,10 @@ module.exports = {
     enabled: process.env.MONITOR_ENABLED !== 'false', // ativo por padrão
     cronSchedule: process.env.MONITOR_CRON || '0 8,13,18 * * 1-5', // 8h, 13h, 18h seg-sex
   },
+  motivacional: {
+    enabled: process.env.MOTIVACIONAL_ENABLED !== 'false', // ativo por padrão
+    cronSchedule: process.env.MOTIVACIONAL_CRON || '0 8 * * *', // todo dia às 8h
+  },
   bot: {
     port: parseInt(process.env.BOT_PORT) || 3000,
     webhookPath: process.env.BOT_WEBHOOK_PATH || '/webhook/evolution',

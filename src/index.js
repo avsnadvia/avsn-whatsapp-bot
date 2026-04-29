@@ -4,6 +4,7 @@ const config = require('./config');
 const logger = require('./logger');
 const evolution = require('./services/evolution');
 const monitor = require('./services/monitor');
+const motivacional = require('./services/motivacional');
 const { handleIncoming } = require('./handlers/message');
 
 const app = express();
@@ -97,6 +98,53 @@ function startMonitorCron() {
   logger.info(`Monitor de publicações ativo — cron: ${schedule} (America/Sao_Paulo)`);
 }
 
+/**
+ * Cron job de mensagem motivacional diária
+ * Envia para todos os números autorizados às 8h (São Paulo)
+ */
+function startMotivacionalCron() {
+  const schedule = config.motivacional?.cronSchedule || '0 8 * * *';
+
+  if (config.motivacional?.enabled === false) {
+    logger.info('Mensagem motivacional desativada');
+    return;
+  }
+
+  cron.schedule(schedule, async () => {
+    logger.info('Enviando mensagem motivacional diária');
+
+    try {
+      const mensagem = await motivacional.gerarMensagem();
+      const destinatarios = config.authorizedNumbers.length > 0
+        ? config.authorizedNumbers
+        : [];
+
+      if (destinatarios.length === 0) {
+        logger.warn('Nenhum destinatário para mensagem motivacional');
+        return;
+      }
+
+      for (const numero of destinatarios) {
+        const remoteJid = `${numero}@s.whatsapp.net`;
+        try {
+          await evolution.sendText(remoteJid, mensagem);
+          logger.info('Motivacional enviada', { to: numero });
+        } catch (err) {
+          logger.error('Erro ao enviar motivacional', { to: numero, error: err.message });
+        }
+        // Pequeno intervalo entre envios
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    } catch (error) {
+      logger.error('Erro ao gerar mensagem motivacional', { error: error.message });
+    }
+  }, {
+    timezone: 'America/Sao_Paulo',
+  });
+
+  logger.info(`Mensagem motivacional ativa — cron: ${schedule} (America/Sao_Paulo)`);
+}
+
 // Setup e inicialização
 async function start() {
   // Garante diretório de logs
@@ -120,6 +168,9 @@ async function start() {
 
   // Inicia cron do monitor
   startMonitorCron();
+
+  // Inicia cron da mensagem motivacional
+  startMotivacionalCron();
 
   // Inicia servidor
   app.listen(config.bot.port, () => {
