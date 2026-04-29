@@ -6,6 +6,7 @@ const jurisprudencia = require('../services/jurisprudencia');
 const monitor = require('../services/monitor');
 const documentAnalysis = require('../services/documentAnalysis');
 const motivacional = require('../services/motivacional');
+const biblia = require('../services/biblia');
 
 // Prefixos de comando — extensível para novos módulos
 const COMMANDS = {
@@ -17,6 +18,7 @@ const COMMANDS = {
   '/documento': handleDocumentoCommand,
   '/doc': handleDocumentoCommand,
   '/motivacional': handleMotivacional,
+  '/biblia': handleBiblia,
   '/ajuda': handleHelp,
   '/help': handleHelp,
 };
@@ -343,6 +345,18 @@ async function handleMotivacional(remoteJid, messageId, args, sender) {
   await evolution.sendReaction(remoteJid, messageId, '💪');
 
   const mensagem = await motivacional.gerarMensagem();
+  await evolution.sendText(remoteJid, mensagem);
+  await evolution.sendReaction(remoteJid, messageId, '✅');
+}
+
+/**
+ * Teste manual da passagem bíblica
+ */
+async function handleBiblia(remoteJid, messageId, args, sender) {
+  logger.info('Bíblia solicitada manualmente', { sender });
+  await evolution.sendReaction(remoteJid, messageId, '🙏');
+
+  const mensagem = await biblia.gerarMensagemBiblica();
   await evolution.sendText(remoteJid, mensagem);
   await evolution.sendReaction(remoteJid, messageId, '✅');
 }

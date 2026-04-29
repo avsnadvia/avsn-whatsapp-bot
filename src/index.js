@@ -5,6 +5,7 @@ const logger = require('./logger');
 const evolution = require('./services/evolution');
 const monitor = require('./services/monitor');
 const motivacional = require('./services/motivacional');
+const biblia = require('./services/biblia');
 const { handleIncoming } = require('./handlers/message');
 
 const app = express();
@@ -145,6 +146,52 @@ function startMotivacionalCron() {
   logger.info(`Mensagem motivacional ativa — cron: ${schedule} (America/Sao_Paulo)`);
 }
 
+/**
+ * Cron job de passagem bíblica diária
+ * Envia para os números configurados em BIBLIA_NUMBERS às 8h (São Paulo)
+ */
+function startBibliaCron() {
+  const schedule = config.biblia?.cronSchedule || '0 8 * * *';
+
+  if (config.biblia?.enabled === false) {
+    logger.info('Passagem bíblica diária desativada');
+    return;
+  }
+
+  cron.schedule(schedule, async () => {
+    logger.info('Enviando passagem bíblica diária');
+
+    try {
+      const mensagem = await biblia.gerarMensagemBiblica();
+      const destinatarios = config.biblia.numbers.length > 0
+        ? config.biblia.numbers
+        : [];
+
+      if (destinatarios.length === 0) {
+        logger.warn('Nenhum destinatário para passagem bíblica (configure BIBLIA_NUMBERS)');
+        return;
+      }
+
+      for (const numero of destinatarios) {
+        const remoteJid = `${numero}@s.whatsapp.net`;
+        try {
+          await evolution.sendText(remoteJid, mensagem);
+          logger.info('Bíblia enviada', { to: numero });
+        } catch (err) {
+          logger.error('Erro ao enviar bíblia', { to: numero, error: err.message });
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    } catch (error) {
+      logger.error('Erro ao gerar passagem bíblica', { error: error.message });
+    }
+  }, {
+    timezone: 'America/Sao_Paulo',
+  });
+
+  logger.info(`Passagem bíblica ativa — cron: ${schedule} (America/Sao_Paulo)`);
+}
+
 // Setup e inicialização
 async function start() {
   // Garante diretório de logs
@@ -171,6 +218,9 @@ async function start() {
 
   // Inicia cron da mensagem motivacional
   startMotivacionalCron();
+
+  // Inicia cron da passagem bíblica
+  startBibliaCron();
 
   // Inicia servidor
   app.listen(config.bot.port, () => {

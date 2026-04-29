@@ -18,9 +18,17 @@ module.exports = {
     cronSchedule: process.env.MONITOR_CRON || '0 8,13,18 * * 1-5', // 8h, 13h, 18h seg-sex
   },
   motivacional: {
-    enabled: process.env.MOTIVACIONAL_ENABLED !== 'false', // ativo por padrão
-    cronSchedule: process.env.MOTIVACIONAL_CRON || '0 8 * * *', // todo dia às 8h
+    enabled: process.env.MOTIVACIONAL_ENABLED !== 'false',
+    cronSchedule: process.env.MOTIVACIONAL_CRON || '0 8 * * *',
     numbers: (process.env.MOTIVACIONAL_NUMBERS || '')
+      .split(',')
+      .map(n => n.trim())
+      .filter(Boolean),
+  },
+  biblia: {
+    enabled: process.env.BIBLIA_ENABLED !== 'false',
+    cronSchedule: process.env.BIBLIA_CRON || '0 8 * * *',
+    numbers: (process.env.BIBLIA_NUMBERS || '')
       .split(',')
       .map(n => n.trim())
       .filter(Boolean),
