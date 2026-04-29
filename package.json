@@ -1,0 +1,16 @@
+{
+  "name": "avsn-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Bot WhatsApp do AVSN para pesquisas jurídicas e investigativas",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0",
+    "winston": "^3.14.0"
+  }
+}

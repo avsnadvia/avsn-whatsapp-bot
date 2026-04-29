@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  # Evolution API — gerencia a conexão com o WhatsApp
+  evolution:
+    image: atendai/evolution-api:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - SERVER_URL=http://localhost:8080
+    volumes:
+      - evolution_data:/evolution/instances
+    restart: unless-stopped
+
+  # Bot AVSN — seu webhook + lógica de pesquisa
+  bot:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - evolution
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  evolution_data:
