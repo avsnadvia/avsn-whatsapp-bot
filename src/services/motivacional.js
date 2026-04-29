@@ -3,37 +3,40 @@ const config = require('../config');
 const logger = require('../logger');
 
 /**
- * Gera mensagem motivacional diária via Perplexity
+ * Gera frase motivacional curta para envio diário
  */
 
-const MOTIVACIONAL_PROMPT = `Você é um assistente do escritório de advocacia criminal AVSN.
-
-Gere UMA mensagem motivacional curta e inspiradora para advogados criminalistas começarem o dia.
+const MOTIVACIONAL_PROMPT = `Responda APENAS com uma frase motivacional curta. Nada mais.
 
 Regras:
-- Máximo 3 parágrafos curtos
-- Pode citar filósofos, juristas, escritores ou pensadores
-- Alterne entre: frases sobre justiça, defesa, perseverança, coragem, ética profissional
-- Não repita mensagens anteriores — seja criativo
-- Tom: elegante, culto, inspirador
-- Não use emojis em excesso — no máximo 1 no início
-- Responda apenas com a mensagem, sem introdução
+- Uma única frase curta (máximo 2 linhas)
+- Pode ser de filósofos, juristas, escritores, pensadores ou própria
+- Sem indicar o autor, sem fonte, sem aspas no nome
+- Sem reflexão, sem comentário, sem emoji, sem título
+- Alterne temas: coragem, perseverança, justiça, trabalho, superação, propósito
+- Varie bastante, não repita frases conhecidas demais
 
-Exemplo de tom:
-"A advocacia criminal é, antes de tudo, um ato de coragem. Defender quem todos acusam exige mais do que conhecimento técnico — exige caráter."`;
+Exemplos:
+"A coragem não é a ausência do medo, mas a decisão de que algo é mais importante que o medo."
+"Grandes batalhas só são dadas a grandes guerreiros."
+"O sucesso nasce do querer, da determinação e persistência em se chegar a um objetivo."
+"Quem luta com bravura, ainda que caia, jamais será derrotado."`;
 
 async function gerarMensagem() {
   try {
+    const hoje = new Date();
+    const seed = `${hoje.getFullYear()}-${hoje.getMonth()}-${hoje.getDate()}`;
+
     const response = await axios.post(
       'https://api.perplexity.ai/chat/completions',
       {
         model: config.perplexity.model,
         messages: [
           { role: 'system', content: MOTIVACIONAL_PROMPT },
-          { role: 'user', content: `Gere a mensagem motivacional do dia (${new Date().toLocaleDateString('pt-BR')}).` },
+          { role: 'user', content: `Frase motivacional do dia (seed: ${seed}).` },
         ],
-        max_tokens: 500,
-        temperature: 0.9,
+        max_tokens: 150,
+        temperature: 0.95,
       },
       {
         headers: {
@@ -44,28 +47,33 @@ async function gerarMensagem() {
       }
     );
 
-    const mensagem = response.data.choices[0].message.content;
-    return `*Bom dia, AVSN!*\n\n${mensagem}`;
+    return response.data.choices[0].message.content.trim();
   } catch (error) {
     logger.error('Erro ao gerar mensagem motivacional', { error: error.message });
-    // Fallback com mensagens fixas
     return getFallback();
   }
 }
 
-/**
- * Fallback caso a API falhe
- */
 function getFallback() {
-  const mensagens = [
-    '*Bom dia, AVSN!*\n\n"A injustiça que se faz a um é uma ameaça que se faz a todos." — Montesquieu\n\nQue o dia de hoje seja de luta firme e técnica precisa.',
-    '*Bom dia, AVSN!*\n\n"O advogado é indispensável à administração da justiça." — Art. 133, CF/88\n\nMais do que indispensável: somos a última trincheira entre o Estado e a liberdade.',
-    '*Bom dia, AVSN!*\n\n"Prefiro a inquietude da dúvida à certeza do erro." — Rui Barbosa\n\nBom trabalho a todos.',
-    '*Bom dia, AVSN!*\n\n"A verdadeira medida de um homem não é como ele se comporta em momentos de conforto, mas como ele se mantém em tempos de controvérsia." — Martin Luther King Jr.\n\nForça e técnica para o dia de hoje.',
-    '*Bom dia, AVSN!*\n\n"Onde não há defesa, não há justiça." — Nelson Hungria\n\nQue cada petição, cada sustentação, cada recurso nosso faça diferença.',
+  const frases = [
+    '"A coragem não é a ausência do medo, mas a decisão de que algo é mais importante que o medo."',
+    '"Grandes batalhas só são dadas a grandes guerreiros."',
+    '"O sucesso nasce do querer, da determinação e persistência em se chegar a um objetivo."',
+    '"Quem luta com bravura, ainda que caia, jamais será derrotado."',
+    '"Não espere por uma crise para descobrir o que é importante na sua vida."',
+    '"A persistência é o caminho do êxito."',
+    '"Faça o teu melhor, na condição que você tem, enquanto você não tem condições melhores."',
+    '"A diferença entre o ordinário e o extraordinário é esse pequeno extra."',
+    '"Discipline é a ponte entre metas e conquistas."',
+    '"Só é derrotado quem desiste. Todos os outros estão a caminho da vitória."',
+    '"A força não vem de vencer. Suas lutas desenvolvem suas forças."',
+    '"Cada dia é uma nova chance de mudar sua vida."',
+    '"O único lugar onde o sucesso vem antes do trabalho é no dicionário."',
+    '"Acredite que você pode e já estará no meio do caminho."',
+    '"Não é sobre ter tempo, é sobre fazer tempo para o que importa."',
   ];
-  const index = new Date().getDate() % mensagens.length;
-  return mensagens[index];
+  const index = new Date().getDate() % frases.length;
+  return frases[index];
 }
 
 module.exports = { gerarMensagem };
