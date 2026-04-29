@@ -37,11 +37,14 @@ async function sendText(remoteJid, text) {
 async function sendReaction(remoteJid, messageId, emoji) {
   try {
     await api.post(`/message/sendReaction/${config.evolution.instance}`, {
-      key: {
-        remoteJid,
-        id: messageId,
+      reactionMessage: {
+        key: {
+          remoteJid,
+          fromMe: false,
+          id: messageId,
+        },
+        reaction: emoji,
       },
-      reaction: emoji,
     });
   } catch (error) {
     logger.warn('Erro ao enviar reação', { error: error.message });

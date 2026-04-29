@@ -10,6 +10,13 @@ module.exports = {
     apiKey: process.env.PERPLEXITY_API_KEY,
     model: 'sonar-pro', // melhor para pesquisas detalhadas
   },
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY, // para análise de documentos (GPT-4o Vision)
+  },
+  monitor: {
+    enabled: process.env.MONITOR_ENABLED !== 'false', // ativo por padrão
+    cronSchedule: process.env.MONITOR_CRON || '0 8,13,18 * * 1-5', // 8h, 13h, 18h seg-sex
+  },
   bot: {
     port: parseInt(process.env.BOT_PORT) || 3000,
     webhookPath: process.env.BOT_WEBHOOK_PATH || '/webhook/evolution',
