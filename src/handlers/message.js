@@ -5,6 +5,7 @@ const evolution = require('../services/evolution');
 const jurisprudencia = require('../services/jurisprudencia');
 const monitor = require('../services/monitor');
 const documentAnalysis = require('../services/documentAnalysis');
+const motivacional = require('../services/motivacional');
 
 // Prefixos de comando — extensível para novos módulos
 const COMMANDS = {
@@ -15,6 +16,7 @@ const COMMANDS = {
   '/monitor': handleMonitor,
   '/documento': handleDocumentoCommand,
   '/doc': handleDocumentoCommand,
+  '/motivacional': handleMotivacional,
   '/ajuda': handleHelp,
   '/help': handleHelp,
 };
@@ -331,6 +333,18 @@ async function handleDocumentoMedia(remoteJid, messageId, message, caption, send
     await evolution.sendText(remoteJid, `⚠️ ${error.message}`);
     await evolution.sendReaction(remoteJid, messageId, '❌');
   }
+}
+
+/**
+ * Teste manual da mensagem motivacional
+ */
+async function handleMotivacional(remoteJid, messageId, args, sender) {
+  logger.info('Motivacional solicitada manualmente', { sender });
+  await evolution.sendReaction(remoteJid, messageId, '💪');
+
+  const mensagem = await motivacional.gerarMensagem();
+  await evolution.sendText(remoteJid, mensagem);
+  await evolution.sendReaction(remoteJid, messageId, '✅');
 }
 
 /**
