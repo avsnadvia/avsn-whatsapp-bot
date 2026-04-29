@@ -20,6 +20,10 @@ module.exports = {
   motivacional: {
     enabled: process.env.MOTIVACIONAL_ENABLED !== 'false', // ativo por padrão
     cronSchedule: process.env.MOTIVACIONAL_CRON || '0 8 * * *', // todo dia às 8h
+    numbers: (process.env.MOTIVACIONAL_NUMBERS || '')
+      .split(',')
+      .map(n => n.trim())
+      .filter(Boolean),
   },
   bot: {
     port: parseInt(process.env.BOT_PORT) || 3000,

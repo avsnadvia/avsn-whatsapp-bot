@@ -115,9 +115,9 @@ function startMotivacionalCron() {
 
     try {
       const mensagem = await motivacional.gerarMensagem();
-      const destinatarios = config.authorizedNumbers.length > 0
-        ? config.authorizedNumbers
-        : [];
+      const destinatarios = config.motivacional.numbers.length > 0
+        ? config.motivacional.numbers
+        : config.authorizedNumbers;
 
       if (destinatarios.length === 0) {
         logger.warn('Nenhum destinatário para mensagem motivacional');
