@@ -7,6 +7,7 @@ const monitor = require('../services/monitor');
 const documentAnalysis = require('../services/documentAnalysis');
 const motivacional = require('../services/motivacional');
 const biblia = require('../services/biblia');
+const mercado = require('../services/mercado');
 
 // Prefixos de comando — extensível para novos módulos
 const COMMANDS = {
@@ -19,6 +20,7 @@ const COMMANDS = {
   '/doc': handleDocumentoCommand,
   '/motivacional': handleMotivacional,
   '/biblia': handleBiblia,
+  '/mercado': handleMercado,
   '/ajuda': handleHelp,
   '/help': handleHelp,
 };
@@ -358,6 +360,25 @@ async function handleBiblia(remoteJid, messageId, args, sender) {
 
   const mensagem = await biblia.gerarMensagemBiblica();
   await evolution.sendText(remoteJid, mensagem);
+  await evolution.sendReaction(remoteJid, messageId, '✅');
+}
+
+/**
+ * Teste manual do resumo do mercado
+ */
+async function handleMercado(remoteJid, messageId, args, sender) {
+  logger.info('Mercado solicitado manualmente', { sender });
+  await evolution.sendReaction(remoteJid, messageId, '📊');
+
+  const resumo = await mercado.gerarResumoMercado();
+  if (resumo.length > 4000) {
+    const parts = splitMessage(resumo, 4000);
+    for (const part of parts) {
+      await evolution.sendText(remoteJid, part);
+    }
+  } else {
+    await evolution.sendText(remoteJid, resumo);
+  }
   await evolution.sendReaction(remoteJid, messageId, '✅');
 }
 

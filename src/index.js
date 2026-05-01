@@ -6,6 +6,7 @@ const evolution = require('./services/evolution');
 const monitor = require('./services/monitor');
 const motivacional = require('./services/motivacional');
 const biblia = require('./services/biblia');
+const mercado = require('./services/mercado');
 const { handleIncoming } = require('./handlers/message');
 
 const app = express();
@@ -192,6 +193,52 @@ function startBibliaCron() {
   logger.info(`Passagem bíblica ativa — cron: ${schedule} (America/Sao_Paulo)`);
 }
 
+/**
+ * Cron job de resumo do mercado financeiro
+ * Envia para os números configurados em MERCADO_NUMBERS (seg-sex)
+ */
+function startMercadoCron() {
+  const schedule = config.mercado?.cronSchedule || '30 7 * * 1-5';
+
+  if (config.mercado?.enabled === false) {
+    logger.info('Resumo do mercado desativado');
+    return;
+  }
+
+  cron.schedule(schedule, async () => {
+    logger.info('Enviando resumo do mercado');
+
+    try {
+      const resumo = await mercado.gerarResumoMercado();
+      const destinatarios = config.mercado.numbers.length > 0
+        ? config.mercado.numbers
+        : [];
+
+      if (destinatarios.length === 0) {
+        logger.warn('Nenhum destinatário para resumo do mercado (configure MERCADO_NUMBERS)');
+        return;
+      }
+
+      for (const numero of destinatarios) {
+        const remoteJid = `${numero}@s.whatsapp.net`;
+        try {
+          await evolution.sendText(remoteJid, resumo);
+          logger.info('Mercado enviado', { to: numero });
+        } catch (err) {
+          logger.error('Erro ao enviar mercado', { to: numero, error: err.message });
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    } catch (error) {
+      logger.error('Erro ao gerar resumo do mercado', { error: error.message });
+    }
+  }, {
+    timezone: 'America/Sao_Paulo',
+  });
+
+  logger.info(`Resumo do mercado ativo — cron: ${schedule} (America/Sao_Paulo)`);
+}
+
 // Setup e inicialização
 async function start() {
   // Garante diretório de logs
@@ -221,6 +268,9 @@ async function start() {
 
   // Inicia cron da passagem bíblica
   startBibliaCron();
+
+  // Inicia cron do resumo do mercado
+  startMercadoCron();
 
   // Inicia servidor
   app.listen(config.bot.port, () => {

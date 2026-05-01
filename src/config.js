@@ -33,6 +33,14 @@ module.exports = {
       .map(n => n.trim())
       .filter(Boolean),
   },
+  mercado: {
+    enabled: process.env.MERCADO_ENABLED !== 'false',
+    cronSchedule: process.env.MERCADO_CRON || '30 7 * * 1-5', // 7:30 seg-sex
+    numbers: (process.env.MERCADO_NUMBERS || '')
+      .split(',')
+      .map(n => n.trim())
+      .filter(Boolean),
+  },
   bot: {
     port: parseInt(process.env.BOT_PORT) || 3000,
     webhookPath: process.env.BOT_WEBHOOK_PATH || '/webhook/evolution',
