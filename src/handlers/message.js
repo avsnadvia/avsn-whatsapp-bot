@@ -8,6 +8,8 @@ const documentAnalysis = require('../services/documentAnalysis');
 const motivacional = require('../services/motivacional');
 const biblia = require('../services/biblia');
 const mercado = require('../services/mercado');
+const audio = require('../services/audio');
+const agenda = require('../services/agenda');
 
 // Prefixos de comando — extensível para novos módulos
 const COMMANDS = {
@@ -21,6 +23,7 @@ const COMMANDS = {
   '/motivacional': handleMotivacional,
   '/biblia': handleBiblia,
   '/mercado': handleMercado,
+  '/agenda': handleAgenda,
   '/ajuda': handleHelp,
   '/help': handleHelp,
 };
@@ -44,6 +47,7 @@ async function handleIncoming(data) {
   // Detecta se a mensagem contém mídia (documento ou imagem)
   const hasDocument = !!data.message?.documentMessage;
   const hasImage = !!data.message?.imageMessage;
+  const hasAudio = !!data.message?.audioMessage;
   const hasMedia = hasDocument || hasImage;
 
   // Caption de mídia (texto junto com imagem/doc)
@@ -52,7 +56,7 @@ async function handleIncoming(data) {
     || '';
 
   if (!remoteJid) return;
-  if (!text && !hasMedia) return;
+  if (!text && !hasMedia && !hasAudio) return;
 
   // Extrai número limpo (sem @s.whatsapp.net)
   const sender = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
@@ -68,6 +72,12 @@ async function handleIncoming(data) {
   processing.add(messageId);
 
   try {
+    // Se recebeu áudio, transcreve e processa como texto
+    if (hasAudio) {
+      await handleAudioMessage(remoteJid, messageId, data.message, sender);
+      return;
+    }
+
     // Se recebeu mídia (imagem ou documento), trata como análise de documento
     if (hasMedia) {
       await handleDocumentoMedia(remoteJid, messageId, data.message, mediaCaption, sender);
@@ -361,6 +371,112 @@ async function handleBiblia(remoteJid, messageId, args, sender) {
   const mensagem = await biblia.gerarMensagemBiblica();
   await evolution.sendText(remoteJid, mensagem);
   await evolution.sendReaction(remoteJid, messageId, '✅');
+}
+
+/**
+ * Processa mensagem de áudio — transcreve e trata como comando/pesquisa
+ */
+async function handleAudioMessage(remoteJid, messageId, message, sender) {
+  if (!config.openai?.apiKey) {
+    await evolution.sendText(remoteJid,
+      '⚠️ Transcrição de áudio não configurada.\nConfigure a variável OPENAI_API_KEY no servidor.'
+    );
+    return;
+  }
+
+  logger.info('Áudio recebido', { sender });
+  await evolution.sendReaction(remoteJid, messageId, '🎙️');
+
+  try {
+    // 1. Baixa o áudio
+    const mediaResult = await audio.downloadAudio(message);
+    const base64 = mediaResult.base64;
+    if (!base64) throw new Error('Não foi possível extrair o áudio.');
+
+    // 2. Transcreve
+    const mimeType = message.audioMessage?.mimetype || 'audio/ogg';
+    const texto = await audio.transcribeAudio(base64, mimeType);
+
+    if (!texto || texto.trim().length === 0) {
+      await evolution.sendText(remoteJid, '⚠️ Não consegui entender o áudio. Tente novamente.');
+      return;
+    }
+
+    logger.info('Áudio transcrito', { sender, texto: texto.substring(0, 80) });
+
+    // 3. Verifica se é comando de agenda
+    const textoLower = texto.toLowerCase();
+    const isAgenda = textoLower.includes('agendar') || textoLower.includes('agenda')
+      || textoLower.includes('reunião') || textoLower.includes('reuniao')
+      || textoLower.includes('marcar') || textoLower.includes('compromisso')
+      || textoLower.includes('cancelar reunião') || textoLower.includes('cancelar compromisso');
+
+    if (isAgenda) {
+      await handleAgenda(remoteJid, messageId, texto, sender);
+    } else {
+      // Trata como pesquisa normal
+      await evolution.sendText(remoteJid, `🎙️ _"${texto}"_`);
+      await handleSearch(remoteJid, messageId, texto, sender);
+    }
+  } catch (error) {
+    logger.error('Erro ao processar áudio', { error: error.message, sender });
+    await evolution.sendText(remoteJid, `⚠️ ${error.message}`);
+    await evolution.sendReaction(remoteJid, messageId, '❌');
+  }
+}
+
+/**
+ * Gerenciamento de agenda via linguagem natural
+ */
+async function handleAgenda(remoteJid, messageId, args, sender) {
+  if (!args) {
+    await evolution.sendText(remoteJid,
+      '*Agenda*\n\n' +
+      'Envie por texto ou áudio:\n\n' +
+      '• _Agendar reunião com Inês amanhã às 14h_\n' +
+      '• _Marcar audiência segunda às 9h_\n' +
+      '• _O que tenho hoje?_\n' +
+      '• _Agenda da semana_\n' +
+      '• _Cancelar reunião com Inês_\n\n' +
+      '💡 _Você também pode enviar um áudio pedindo para agendar._'
+    );
+    return;
+  }
+
+  logger.info('Agenda solicitada', { sender, args: args.substring(0, 80) });
+  await evolution.sendReaction(remoteJid, messageId, '📅');
+
+  try {
+    const parsed = await agenda.parseComando(args);
+
+    let result;
+
+    switch (parsed.acao) {
+      case 'agendar':
+        result = agenda.agendarEvento(parsed);
+        break;
+      case 'listar':
+        result = agenda.listarEventos('todos');
+        break;
+      case 'hoje':
+        result = agenda.listarEventos('hoje');
+        break;
+      case 'semana':
+        result = agenda.listarEventos('semana');
+        break;
+      case 'cancelar':
+        result = agenda.cancelarEvento(parsed.titulo);
+        break;
+      default:
+        result = agenda.listarEventos('todos');
+    }
+
+    await evolution.sendText(remoteJid, result);
+    await evolution.sendReaction(remoteJid, messageId, '✅');
+  } catch (error) {
+    logger.error('Erro na agenda', { error: error.message, sender });
+    await evolution.sendText(remoteJid, `⚠️ ${error.message}`);
+  }
 }
 
 /**
